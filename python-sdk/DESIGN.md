@@ -45,11 +45,16 @@ TempestExtremes/
 │   └── ...
 │
 |-- python-sdk/
-    |-- bindings/
+    |-- build
+    |-- DetectNodes/
         |-- detect_nodes_binding.cpp
         |-- ...
+    |-- test/
+        └── detect_nodes_test.py
     |-- __init__.py
-    |-- tempest_extremes.py
+    |-- setup.py
+    |-- DESIGN.md
+    |-- DetectNodes.cpython-310-x86_64-linux-gnu.so
 ```
 
 ### 4.2 Python Bindings with pybind11
@@ -58,15 +63,15 @@ TempestExtremes/
    
    - File: `pybindings/detectnodes_bindings.cpp`
    - Expose necessary functions/classes from `DetectNodes` to Python.
-   - Use Python's `argparse` module to mirror the `CommandLine` macros.
+   - TODO: Use Python's `argparse` module to mirror the `CommandLine` macros. 
 
 2. **Other Modules**: Follow a similar approach for other modules in the `src/` directory.
 
 ### 4.3 Compilation
 
-1. Use `c++` to compile the bindings. The compiled shared library (`.so` or `.pyd`) will be the primary output that Python users will import.
+Use the `setup.py` script within the `python-sdk/` directory to automate the build process. 
 
-2. Use the `setup.py` script within the `python-sdk/` directory to automate the build process.
+`python setup.py build_ext --inplace`
 
 ### 4.4 Testing
 
@@ -78,7 +83,10 @@ TempestExtremes/
 
 1. **Inline Comments**: Ensure that each binding has inline comments detailing its functionality and any nuances related to its operation.
 
-2. **User Guide**: Update the existing user guide or create a separate guide specifically for the Python SDK. This guide should provide examples, usage scenarios, and best practices.
+2. **User Guide**: 
+    - Update the existing user guide or create a separate guide specifically for the Python SDK. This guide should provide examples, usage scenarios, and best practices.
+    - Make sure the binding code include doc string so that user can access the documentation through help() from python terminal. 
+
 
 ## 5. Future Work
 
