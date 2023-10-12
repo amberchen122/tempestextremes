@@ -71,6 +71,8 @@ TempestExtremes/
 
 Use the `setup.py` script within the `python-sdk/` directory to automate the build process. 
 
+Run the following command under python-sdk directory:
+
 `python setup.py build_ext --inplace`
 
 ### 4.4 Testing
