@@ -1,186 +1,330 @@
 #include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
+
 #include "../src/nodes/DetectNodes.cpp"
 #include "../src/base/Variable.h"
 #include "../src/nodes/ClosedContourOp.h"
+#include "../src/base/FilenameList.h"
+
 namespace py = pybind11;
 
-// test function
-int my_add(int a, int b) {
-	return a + b;
+template <typename OpType>
+std::vector<OpType>* parseOperations(
+    const py::list& pyOpList, 
+    VariableRegistry& varreg
+) {
+    auto vecOps = new std::vector<OpType>(); // Allocate on the heap
+    for (const auto& item : pyOpList) {
+        std::string strOp = item.cast<std::string>();
+        OpType op;
+        op.Parse(varreg, strOp);
+        vecOps->push_back(op);
+    }
+    return vecOps;
 }
 
-PYBIND11_MODULE(DetectNodes, m) {
-    m.doc() = "DetectNodes is used for the detection of nodal features. "
-               "This executable is analogous to the \"map\" step in the "
-               "\"MapReduce\" framework. Candidate points are selected based "
-               "on information at a single time slice. Typically DetectNodes "
-               "is followed by StitchNodes to connect candidate points in time.";
-	
-	py::register_exception<Exception>(m, "Exception");
- 
-	py::class_<VariableRegistry>(m, "VariableRegistry")
-		.def(py::init<>())
-		.def("FindOrRegisterSubStr", &VariableRegistry::FindOrRegisterSubStr)
-		.def("FindOrRegister", &VariableRegistry::FindOrRegister)
-		.def("Get", &VariableRegistry::Get, py::return_value_policy::reference)
-		.def("GetVariableString", &VariableRegistry::GetVariableString)
-		.def("UnloadAllGridData", &VariableRegistry::UnloadAllGridData)
-		.def("GetDependentVariableIndices", &VariableRegistry::GetDependentVariableIndices)
-		.def("GetDependentVariableNames", &VariableRegistry::GetDependentVariableNames)
-		// .def("GetAuxiliaryDimInfo", &VariableRegistry::GetAuxiliaryDimInfo) // not used anywhere in the TE cpp code
-		.def("ClearProcessingQueue", &VariableRegistry::ClearProcessingQueue)
-		.def("AppendVariableToProcessingQueue", &VariableRegistry::AppendVariableToProcessingQueue)
-		.def("GetProcessingQueueVarPos", &VariableRegistry::GetProcessingQueueVarPos)
-		.def("GetProcessingQueueVarIx", &VariableRegistry::GetProcessingQueueVarIx)
-		.def("GetProcessingQueueVariable", &VariableRegistry::GetProcessingQueueVariable, py::return_value_policy::reference)
-		.def("GetProcessingQueueAuxIx", &VariableRegistry::GetProcessingQueueAuxIx, py::return_value_policy::reference)
-		.def("GetProcessingQueueAuxSize", &VariableRegistry::GetProcessingQueueAuxSize, py::return_value_policy::reference)
-		.def("GetProcessingQueueOffset", &VariableRegistry::GetProcessingQueueOffset)
-		.def("AdvanceProcessingQueue", &VariableRegistry::AdvanceProcessingQueue)
-		.def("ResetProcessingQueue", &VariableRegistry::ResetProcessingQueue)
-		.def("GetDataOp", &VariableRegistry::GetDataOp, py::return_value_policy::reference);
-	py::class_<DetectCyclonesParam>(m, "DetectCyclonesParam")
-		.def(py::init<>())
-		.def("__repr__", [](const DetectCyclonesParam &param) {
-			std::stringstream repr;
-			repr << "DetectCyclonesParam("
-				 << "ixSearchBy=" << param.ixSearchBy << ", "
-				 << "strSearchByThreshold=" << param.strSearchByThreshold << ", "
-				 << "fSearchByMinima=" << param.fSearchByMinima << ", "
-				 << "nInitialSearchDist=" << param.nInitialSearchDist << ", "
-				 << "nInitialSearchDistSafe=" << param.nInitialSearchDistSafe << ", "
-				 << "dMaxLatitude=" << param.dMaxLatitude << ", "
-				 << "dMinLatitude=" << param.dMinLatitude << ", "
-				 << "dMinAbsLatitude=" << param.dMinAbsLatitude << ", "
-				 << "dMaxLongitude=" << param.dMaxLongitude << ", "
-				 << "dMinLongitude=" << param.dMinLongitude << ", "
-				 << "dMergeDist=" << param.dMergeDist << ", "
-				 << "pvecClosedContourOp=[";
-			// for (const auto& op : param.pvecClosedContourOp) {
-			// 	repr << op << ", ";
-			// }
-			// repr << "], pvecNoClosedContourOp=[";
-			// for (const auto& op : param.pvecNoClosedContourOp) {
-			// 	repr << op << ", ";
-			// }
-			// repr << "], pvecThresholdOp=[";
-			// for (const auto& op : param.pvecThresholdOp) {
-			// 	repr << op << ", ";
-			// }
-			// repr << "], pvecOutputOp=[";
-			// for (const auto& op : param.pvecOutputOp) {
-			// 	repr << op << ", ";
-			// }
-			repr << "], nTimeStride=" << param.nTimeStride << ", "
-				 << "strTimeFilter=" << param.strTimeFilter << ", "
-				 << "strLatitudeName=" << param.strLatitudeName << ", "
-				 << "strLongitudeName=" << param.strLongitudeName << ", "
-				 << "fRegional=" << param.fRegional << ", "
-				 << "fDiagonalConnectivity=" << param.fDiagonalConnectivity << ", "
-				 << "fOutputHeader=" << param.fOutputHeader << ", "
-				 << "fOutputSeconds=" << param.fOutputSeconds << ", "
-				 << "iVerbosityLevel=" << param.iVerbosityLevel << ")";
-			return repr.str();
-		})
-		// .def_readwrite("fpLog", &DetectCyclonesParam::fpLog) //access through setter instead
-		.def_readwrite("ixSearchBy", &DetectCyclonesParam::ixSearchBy)
-		.def_readwrite("strSearchByThreshold", &DetectCyclonesParam::strSearchByThreshold)
-		.def_readwrite("fSearchByMinima", &DetectCyclonesParam::fSearchByMinima)
-		.def_readwrite("nInitialSearchDist", &DetectCyclonesParam::nInitialSearchDist)
-		.def_readwrite("nInitialSearchDistSafe", &DetectCyclonesParam::nInitialSearchDistSafe)
-		.def_readwrite("dMaxLatitude", &DetectCyclonesParam::dMaxLatitude)
-		.def_readwrite("dMinLatitude", &DetectCyclonesParam::dMinLatitude)
-		.def_readwrite("dMinAbsLatitude", &DetectCyclonesParam::dMinAbsLatitude)
-		.def_readwrite("dMaxLongitude", &DetectCyclonesParam::dMaxLongitude)
-		.def_readwrite("dMinLongitude", &DetectCyclonesParam::dMinLongitude)
-		.def_readwrite("dMergeDist", &DetectCyclonesParam::dMergeDist)
-		.def_readwrite("pvecClosedContourOp", &DetectCyclonesParam::pvecClosedContourOp)
-		.def_readwrite("pvecNoClosedContourOp", &DetectCyclonesParam::pvecNoClosedContourOp)
-		.def_readwrite("pvecThresholdOp", &DetectCyclonesParam::pvecThresholdOp)
-		.def_readwrite("pvecOutputOp", &DetectCyclonesParam::pvecOutputOp)
-		.def_readwrite("nTimeStride", &DetectCyclonesParam::nTimeStride)
-		.def_readwrite("strTimeFilter", &DetectCyclonesParam::strTimeFilter)
-		.def_readwrite("strLatitudeName", &DetectCyclonesParam::strLatitudeName)
-		.def_readwrite("strLongitudeName", &DetectCyclonesParam::strLongitudeName)
-		.def_readwrite("fRegional", &DetectCyclonesParam::fRegional)
-		.def_readwrite("fDiagonalConnectivity", &DetectCyclonesParam::fDiagonalConnectivity)
-		.def_readwrite("fOutputHeader", &DetectCyclonesParam::fOutputHeader)
-		.def_readwrite("fOutputSeconds", &DetectCyclonesParam::fOutputSeconds)
-		.def_readwrite("iVerbosityLevel", &DetectCyclonesParam::iVerbosityLevel)
-		.def("set_log_path", [](DetectCyclonesParam &self, const std::string &path) {
-			self.fpLog = fopen(path.c_str(), "w");
-			if (!self.fpLog) {
-				throw std::runtime_error("Failed to open file at " + path);
+class DetectNodesParameter {
+	public:
+		DetectNodesParameter(
+			// TODO: should only specify one of --in_data and --in_data_list
+			// TODO: should only specify one of --out_data and --out_data_list
+			std::string strInputFile = "", // in_data file
+			std::string strOutputFile = "", // out data file, used when in_data is specified
+			std::string strInputFileList = "", // in_data_list file
+			std::string strOutputFileList = "", // out_data_list file, used when in_data_list is specified
+
+			std::string strConnectivity = "", // connectivity file
+
+			// variables to set variableRegistry and detectCyclonesParam
+			bool diag_connect = false, // --diag_connect <bool> //TODO: what should be the default value?
+			// Search by minima
+			bool searchByMin = false, 
+			std::string strSearchBy = "PSL", 
+			std::string strSearchByThreshold = "", //TODO: what should be the default value?
+			// Maximum latitude for detection
+			double dMaxLatitude = 0,
+			// Minimum latitude for detection
+			double dMinLatitude = 0,
+			// Minimum absolute value of latitude for detection
+			double dMinAbsLatitude = 0,
+			// Maximum longitude for detection
+			double dMaxLongitude = 0,
+			// Minimum longitude for detection
+			double dMinLongitude = 0,
+			// Merge distance
+			double dMergeDist = 0,
+			// Time stride
+			int nTimeStride = 1,
+			// Time filter
+			std::string strTimeFilter = "",
+			// Name of the latitude dimension
+			std::string strLatitudeName = "lat",
+			// Name of the longitude dimension
+			std::string strLongitudeName = "lon",
+			// Regional (do not wrap longitudinal boundaries)
+			bool fRegional = false,
+			// Output header
+			bool fOutputHeader = false, //TODO: what should be the default value?
+			// Output seconds as part of timestamp
+			bool fOutputSeconds = false, //TODO: what should be the default value?
+			// Verbosity level
+			int iVerbosityLevel = 0,
+			// TODO: logdir
+			std::string strLogDir = "."
+		): 
+		varreg(), dcuparam() 
+		{
+			// initialize vecInputFiles and vecOutputFiles
+			// building a unified interface for input and output files
+			if (strInputFile != "") {
+				this->vecInputFiles.push_back(strInputFile);
+				this->vecOutputFiles.push_back(strOutputFile);
+			} else if (strInputFileList != "") {
+				this->vecInputFiles.FromFile(strInputFileList, true);
+				this->vecOutputFiles.FromFile(strOutputFileList);
+			} else {
+				_EXCEPTIONT("Either in_data or in_data_list must be specified");
 			}
-		})
-		// setter for pvecClosedContourOp
-		.def("set_closed_contour_cmd", [](DetectCyclonesParam &self, py::list pylist) {
-			std::vector<std::vector<std::string>> closed_contour_cmds;
-			for (const auto& item : pylist) {
-				if (py::isinstance<py::sequence>(item)) {
-					py::sequence seq = item.cast<py::sequence>();
-					std::vector<std::string> cmd;
+		
+			this->numInputFilesLines = this->vecInputFiles.size();
 
-					for (const auto& str_item : seq) {
-						if (py::isinstance<py::str>(str_item)) {
-							std::string str = str_item.cast<std::string>();
-							cmd.push_back(str);
-						} else {
-							throw std::runtime_error("All inner items must be strings.");
-						}
-					}
+			if (this->numInputFilesLines != this->vecOutputFiles.size()) {
+				_EXCEPTIONT("Number of input files must equal number of output files");
+			}
 
-					closed_contour_cmds.push_back(cmd);
-				} else {
-					throw std::runtime_error("All items in the list must be sequences of strings.");
+			this->strConnectivity = strConnectivity;              
+
+			// initialize detectCyclonesParam
+			this->dcuparam.fDiagonalConnectivity = diag_connect;
+
+			this->dcuparam.fSearchByMinima = searchByMin;
+			this->dcuparam.ixSearchBy = varreg.FindOrRegister(strSearchBy);
+			this->dcuparam.strSearchByThreshold = strSearchByThreshold;
+
+			this->dcuparam.dMaxLatitude = dMaxLatitude;
+			this->dcuparam.dMinLatitude = dMinLatitude;
+			this->dcuparam.dMinAbsLatitude = dMinAbsLatitude;
+			this->dcuparam.dMaxLongitude = dMaxLongitude;
+			this->dcuparam.dMinLongitude = dMinLongitude;
+			this->dcuparam.dMergeDist = dMergeDist;
+			LongLatValidationProcess();
+
+			this->dcuparam.nTimeStride = nTimeStride;
+			this->dcuparam.strTimeFilter = strTimeFilter;
+			// Note timestride is deprecated
+			if (dcuparam.nTimeStride != 1) {
+				//Announce("WARNING: --timestride is deprecated.  Consider using --timefilter instead.");
+				if (dcuparam.strTimeFilter != "") {
+					_EXCEPTIONT("Only one of --timestride and --timefilter can be used.");
 				}
 			}
-			std::vector<ClosedContourOp> vecClosedContourOp;
-			// for (const auto& cmd : closed_contour_cmds) {
-			// 	ClosedContourOp op;
-			// 	std::string strSubStr;
-			// 	for (const auto& str : op) {
-			// 		strSubStr += str + ",";
-			// 	}
-			// 	strSubStr.pop_back(); // remove the last comma
-			// 	op.Parse(self.varreg, strSubStr); 
-			// 	vecClosedContourOp.push_back(op);
-			// }
-			// for (const auto& cmd : closed_contour_cmds) {
-			// 	for (const auto& str : cmd) {
-			// 		std::cout << str << std::endl;
-			// 	}
-			// }
-		})
+			this->dcuparam.strLatitudeName = strLatitudeName;
+			this->dcuparam.strLongitudeName = strLongitudeName;
+			this->dcuparam.fRegional = fRegional;
+			this->dcuparam.fOutputHeader = fOutputHeader;
+			this->dcuparam.fOutputSeconds = fOutputSeconds;
+			this->dcuparam.iVerbosityLevel = iVerbosityLevel;
 
-		;
+			// set log file
+			if (this->numInputFilesLines == 1) {
+				this->dcuparam.fpLog = stdout;
+			} 
+			else 
+			{
+				std::string strLogFile = strLogDir + "/log" + ".txt";
+				this->dcuparam.fpLog = fopen(strLogFile.c_str(), "w");
+			}
+		}
 
-    m.def("DetectNodes", [](
-				const std::string& strInputFiles, 
-				const std::string& strOutputFile, 
-				const std::string& strConnectivity, 
-				VariableRegistry& varreg, 
-				const DetectCyclonesParam& param) 
+		~DetectNodesParameter() {
+			if (this->numInputFilesLines > 1) {
+				fclose(this->dcuparam.fpLog);
+			}
+		}	
+
+	public:
+		VariableRegistry varreg;       // Instance of VariableRegistry class, its constructor does not take any arguments
+		DetectCyclonesParam dcuparam; // Instance of DetectCyclonesParam class, its constructor does not take any arguments
+		
+		// TODO: deal with multiple input files and output files (command --in_data_list  and --out_data_list)
+		std::string strInputFiles;				// Input file name
+		std::string strOutputFile;         // Output file name
+		// TODO: in and out files length must equal 
+		FilenameList vecInputFiles;
+		FilenameList vecOutputFiles;
+		// number of input files, equal to 1 if --in_data is specified, otherwise equal to the number of files in --in_data_list
+		int numInputFilesLines;
+		std::string strConnectivity;
+	
+	private:
+		// perform validation on longitudes and latitudes
+		// also convert longitudes and latitudes to radians
+		void LongLatValidationProcess() {
+			// Check minimum/maximum latitude/longitude
+			if ((dcuparam.dMaxLatitude < -90.0) || (dcuparam.dMaxLatitude > 90.0)) {
+				_EXCEPTIONT("--maxlat must in the range [-90,90]");
+			}
+			if ((dcuparam.dMinLatitude < -90.0) || (dcuparam.dMinLatitude > 90.0)) {
+				_EXCEPTIONT("--minlat must in the range [-90,90]");
+			}
+			if (dcuparam.dMinLatitude > dcuparam.dMaxLatitude) {
+				_EXCEPTIONT("--minlat must be less than --maxlat");
+			}
+
+			dcuparam.dMaxLatitude *= M_PI / 180.0;
+			dcuparam.dMinLatitude *= M_PI / 180.0;
+			dcuparam.dMinAbsLatitude *= M_PI / 180.0;
+
+			if (dcuparam.dMinLongitude < 0.0) {
+				int iMinLongitude =
+					static_cast<int>(-dcuparam.dMinLongitude / 360.0);
+				dcuparam.dMinLongitude +=
+					static_cast<double>(iMinLongitude + 1) * 360.0;
+			}
+			if (dcuparam.dMinLongitude >= 360.0) {
+				int iMinLongitude =
+					static_cast<int>(dcuparam.dMinLongitude / 360.0);
+				dcuparam.dMinLongitude -=
+					static_cast<double>(iMinLongitude - 1) * 360.0;
+			}
+			if (dcuparam.dMaxLongitude < 0.0) {
+				int iMaxLongitude =
+					static_cast<int>(-dcuparam.dMaxLongitude / 360.0);
+				dcuparam.dMaxLongitude +=
+					static_cast<double>(iMaxLongitude + 1) * 360.0;
+			}
+			if (dcuparam.dMaxLongitude >= 360.0) {
+				int iMaxLongitude =
+					static_cast<int>(dcuparam.dMaxLongitude / 360.0);
+				dcuparam.dMaxLongitude -=
+					static_cast<double>(iMaxLongitude - 1) * 360.0;
+			}
+
+			dcuparam.dMaxLongitude *= M_PI / 180.0;
+			dcuparam.dMinLongitude *= M_PI / 180.0;
+		}
+};
+
+
+
+PYBIND11_MODULE(DetectNodes, m) {
+	m.doc() = "DetectNodes is used for the detection of nodal features. "
+			   "This executable is analogous to the \"map\" step in the "
+			   "\"MapReduce\" framework. Candidate points are selected based "
+			   "on information at a single time slice. Typically DetectNodes "
+			   "is followed by StitchNodes to connect candidate points in time.";
+	
+	// Register cpp exeptions with python
+	py::register_exception<Exception>(m, "Exception");
+	
+	// Expose the DetectNodesParameter class to python
+	py::class_<DetectNodesParameter>(m, "DetectNodesParameter", 
+		R"pbdoc(
+			DetectNodesParameter class is used for configuring the parameters required for node detection.
+			This class holds various configuration options and parameters used in the detection process.
+			These include input and output file paths, geographical parameters, and various detection options.
+		)pbdoc")
+        .def(py::init([](const std::string& strInputFile,
+                         const std::string& strOutputFile,
+                         const std::string& strInputFileList,
+                         const std::string& strOutputFileList,
+                         const std::string& strConnectivity,
+                         bool diag_connect,
+                         bool searchByMin,
+                         const std::string& strSearchBy,
+                         const std::string& strSearchByThreshold,
+                         double dMaxLatitude,
+                         double dMinLatitude,
+                         double dMinAbsLatitude,
+                         double dMaxLongitude,
+                         double dMinLongitude,
+                         double dMergeDist,
+                         int nTimeStride,
+                         const std::string& strTimeFilter,
+                         const std::string& strLatitudeName,
+                         const std::string& strLongitudeName,
+                         bool fRegional,
+                         bool fOutputHeader,
+                         bool fOutputSeconds,
+                         int iVerbosityLevel,
+                         const std::string& strLogDir,
+						 py::list closedContourOp,
+						 py::list noClosedContourOp,
+						 py::list thresholdOp,
+						 py::list nodeOutputOp
+						 ) 
+		{
+            DetectNodesParameter param = DetectNodesParameter(strInputFile, strOutputFile, strInputFileList, strOutputFileList,
+                                            strConnectivity, diag_connect, searchByMin, strSearchBy, strSearchByThreshold,
+                                            dMaxLatitude, dMinLatitude, dMinAbsLatitude, dMaxLongitude, dMinLongitude,
+                                            dMergeDist, nTimeStride, strTimeFilter, strLatitudeName, strLongitudeName,
+                                            fRegional, fOutputHeader, fOutputSeconds, iVerbosityLevel, strLogDir);
+			/* TODO: add the following parameters to the constructor
+			std::vector<ClosedContourOp> * pvecClosedContourOp;
+
+			std::vector<ClosedContourOp> * pvecNoClosedContourOp;
+
+			std::vector<ThresholdOp> * pvecThresholdOp;
+
+			std::vector<NodeOutputOp> * pvecOutputOp;*/
+
+			// Set the pointers after parsing the operations
+			param.dcuparam.pvecClosedContourOp = parseOperations<ClosedContourOp>(closedContourOp, param.varreg);
+			param.dcuparam.pvecNoClosedContourOp = parseOperations<ClosedContourOp>(noClosedContourOp, param.varreg);
+			param.dcuparam.pvecThresholdOp = parseOperations<ThresholdOp>(thresholdOp, param.varreg);
+			param.dcuparam.pvecOutputOp = parseOperations<NodeOutputOp>(nodeOutputOp, param.varreg);
+
+			return param;
+		}
+		
+		),
+			"DetectNodesParameter constructor", // TODO: add docstring
+            py::arg("strInputFile") = "",
+            py::arg("strOutputFile") = "",
+            py::arg("strInputFileList") = "",
+            py::arg("strOutputFileList") = "",
+            py::arg("strConnectivity") = "",
+            py::arg("diag_connect") = false,
+            py::arg("searchByMin") = false,
+            py::arg("strSearchBy") = "PSL",
+            py::arg("strSearchByThreshold") = "",
+            py::arg("dMaxLatitude") = 0,
+            py::arg("dMinLatitude") = 0,
+            py::arg("dMinAbsLatitude") = 0,
+            py::arg("dMaxLongitude") = 0,
+            py::arg("dMinLongitude") = 0,
+            py::arg("dMergeDist") = 0,
+            py::arg("nTimeStride") = 1,
+            py::arg("strTimeFilter") = "",
+            py::arg("strLatitudeName") = "lat",
+            py::arg("strLongitudeName") = "lon",
+            py::arg("fRegional") = false,
+            py::arg("fOutputHeader") = false,
+            py::arg("fOutputSeconds") = false,
+            py::arg("iVerbosityLevel") = 0,
+            py::arg("closedContourOp") = py::list(),
+			py::arg("noClosedContourOp") = py::list(),
+			py::arg("thresholdOp") = py::list(),
+			py::arg("nodeOutputOp") = py::list()
+			)
+
+			// TODO: add setter for the above parameters
+			// TODO add __repr__ for the class
+			;
+
+
+	// main function
+	m.def("DetectNodes", [](
+				const DetectNodesParameter& param) 
 		{
 			int iFile = 0; //placeholder value since iFile is not used in DetectCyclonesUnstructured
-			// try
-			// {
-			// 	DetectCyclonesUnstructured(iFile, strInputFiles, strOutputFile, strConnectivity, varreg, param);
-			// }
-			// catch(const std::exception& e)
-			// {
-			// 	std::cerr << e.what() << '\n';
-			// }
-			DetectCyclonesUnstructured(iFile, strInputFiles, strOutputFile, strConnectivity, varreg, param);
-
+			std::string strInputFile = param.vecInputFiles[0]; 
+			std::string strOutputFile = param.vecOutputFiles[0]; 
+			std::string strConnectivity = param.strConnectivity; 
+			DetectCyclonesUnstructured(iFile, strInputFile, strOutputFile, strConnectivity, const_cast<VariableRegistry&>(param.varreg), const_cast<DetectCyclonesParam&>(param.dcuparam));
 		}, 
-        py::arg("strInputFiles"), 
-        py::arg("strOutputFile"), 
-        py::arg("strConnectivity"), 
-        py::arg("varreg"), 
-        py::arg("param"));
+		py::arg("DetectNodesParameter")
+	);
 
 
-	// just a test function 
-	// m.def("my_add", &my_add, "A function which adds two numbers");
 }
