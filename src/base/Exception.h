@@ -146,6 +146,13 @@ class Exception {
 
 			return strReturn;
 		}
+		// Add a what() method that returns the error message. 
+		// This method is expected by C++ runtime for exceptions and 
+		// also used by pybind11 to retrieve the error message.
+		const char* what() const noexcept {
+        	m_whatBuffer = ToString();
+        	return m_whatBuffer.c_str();
+    	}
 
 	private:
 		///	<summary>
@@ -163,6 +170,7 @@ class Exception {
 		///		occurred.
 		///	</summary>
 		unsigned int m_uiLine;
+		mutable std::string m_whatBuffer;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
