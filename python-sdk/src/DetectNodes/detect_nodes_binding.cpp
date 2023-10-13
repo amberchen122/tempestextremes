@@ -302,6 +302,7 @@ PYBIND11_MODULE(DetectNodes, m) {
             py::arg("fOutputHeader") = false,
             py::arg("fOutputSeconds") = false,
             py::arg("iVerbosityLevel") = 0,
+			py::arg("strLogDir") = ".",
             py::arg("closedContourOp") = py::list(),
 			py::arg("noClosedContourOp") = py::list(),
 			py::arg("thresholdOp") = py::list(),
