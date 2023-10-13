@@ -21,6 +21,8 @@ bin/*
 
 test
 
+!python-sdk/test
+
 test/*.nc
 
 test/*.nc4
