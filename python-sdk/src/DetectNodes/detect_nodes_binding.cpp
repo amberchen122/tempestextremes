@@ -215,7 +215,15 @@ PYBIND11_MODULE(DetectNodes, m) {
 			   "is followed by StitchNodes to connect candidate points in time.";
 	
 	// Register cpp exeptions with python
-	py::register_exception<Exception>(m, "Exception");
+	// Register exception translator
+    py::register_exception_translator([](std::exception_ptr p) {
+        try {
+            if (p) std::rethrow_exception(p); // This allows the exception to be re-thrown to identify its type
+        } catch (const Exception &e) {
+            // Translate the C++ exception into a Python exception
+            PyErr_SetString(PyExc_RuntimeError, e.ToString().c_str());
+        }
+    });
 	
 	// Expose the DetectNodesParameter class to python
 	py::class_<DetectNodesParameter>(m, "DetectNodesParameter", 
