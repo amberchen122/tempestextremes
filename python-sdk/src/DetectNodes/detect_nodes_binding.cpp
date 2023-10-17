@@ -1,5 +1,6 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
+#include <mpi.h>
 
 #include "../src/nodes/DetectNodes.cpp"
 #include "../src/base/Variable.h"
@@ -8,6 +9,16 @@
 
 namespace py = pybind11;
 
+
+
+/**
+ * @brief Parses a list of operations and returns a vector of the specified operation type.
+ * 
+ * @tparam OpType The type of operation to parse.
+ * @param pyOpList The list of operations to parse.
+ * @param varreg The variable registry to use for parsing.
+ * @return std::vector<OpType>* A pointer to the vector of parsed operations.
+ */
 template <typename OpType>
 std::vector<OpType>* parseOperations(
     const py::list& pyOpList, 
@@ -72,7 +83,7 @@ class DetectNodesParameter {
 			// TODO: logdir
 			std::string strLogDir = "."
 		): 
-		varreg(), dcuparam() 
+		varreg(), dcuparam()
 		{
 			// initialize vecInputFiles and vecOutputFiles
 			// building a unified interface for input and output files
@@ -86,11 +97,11 @@ class DetectNodesParameter {
 				_EXCEPTIONT("Either in_data or in_data_list must be specified");
 			}
 		
-			this->numInputFilesLines = this->vecInputFiles.size();
-
-			if (this->numInputFilesLines != this->vecOutputFiles.size()) {
+			if (this->vecInputFiles.size() != this->vecOutputFiles.size()) {
 				_EXCEPTIONT("Number of input files must equal number of output files");
 			}
+
+			this->numInputFilesLines = this->vecInputFiles.size();
 
 			this->strConnectivity = strConnectivity;              
 
@@ -125,36 +136,22 @@ class DetectNodesParameter {
 			this->dcuparam.fOutputSeconds = fOutputSeconds;
 			this->dcuparam.iVerbosityLevel = iVerbosityLevel;
 
-			// set log file
-			if (this->numInputFilesLines == 1) {
-				this->dcuparam.fpLog = stdout;
-			} 
-			else 
-			{
-				std::string strLogFile = strLogDir + "/log" + ".txt";
-				this->dcuparam.fpLog = fopen(strLogFile.c_str(), "w");
-			}
+			this->strLogDir = strLogDir;
 		}
 
 		~DetectNodesParameter() {
-			if (this->numInputFilesLines > 1) {
-				fclose(this->dcuparam.fpLog);
-			}
 		}	
 
 	public:
 		VariableRegistry varreg;       // Instance of VariableRegistry class, its constructor does not take any arguments
 		DetectCyclonesParam dcuparam; // Instance of DetectCyclonesParam class, its constructor does not take any arguments
 		
-		// TODO: deal with multiple input files and output files (command --in_data_list  and --out_data_list)
-		std::string strInputFiles;				// Input file name
-		std::string strOutputFile;         // Output file name
-		// TODO: in and out files length must equal 
 		FilenameList vecInputFiles;
 		FilenameList vecOutputFiles;
 		// number of input files, equal to 1 if --in_data is specified, otherwise equal to the number of files in --in_data_list
 		int numInputFilesLines;
 		std::string strConnectivity;
+		std::string strLogDir;
 	
 	private:
 		// perform validation on longitudes and latitudes
@@ -267,14 +264,6 @@ PYBIND11_MODULE(DetectNodes, m) {
                                             dMaxLatitude, dMinLatitude, dMinAbsLatitude, dMaxLongitude, dMinLongitude,
                                             dMergeDist, nTimeStride, strTimeFilter, strLatitudeName, strLongitudeName,
                                             fRegional, fOutputHeader, fOutputSeconds, iVerbosityLevel, strLogDir);
-			/* TODO: add the following parameters to the constructor
-			std::vector<ClosedContourOp> * pvecClosedContourOp;
-
-			std::vector<ClosedContourOp> * pvecNoClosedContourOp;
-
-			std::vector<ThresholdOp> * pvecThresholdOp;
-
-			std::vector<NodeOutputOp> * pvecOutputOp;*/
 
 			// Set the pointers after parsing the operations
 			param.dcuparam.pvecClosedContourOp = parseOperations<ClosedContourOp>(closedContourOp, param.varreg);
@@ -288,7 +277,7 @@ PYBIND11_MODULE(DetectNodes, m) {
 		),
 			"DetectNodesParameter constructor", // TODO: add docstring
             py::arg("strInputFile") = "",
-            py::arg("strOutputFile") = "",
+            py::arg("strOutputFile") = "out.dat",
             py::arg("strInputFileList") = "",
             py::arg("strOutputFileList") = "",
             py::arg("strConnectivity") = "",
@@ -319,18 +308,70 @@ PYBIND11_MODULE(DetectNodes, m) {
 
 			// TODO: add setter for the above parameters
 			// TODO add __repr__ for the class
+			.def("__repr__", [](const DetectNodesParameter &param) {
+				std::stringstream repr;
+
+				// TODO: describe how output will be written to file (one on one mapping of vecInputFiles and vecOutputFiles)
+				
+
+				repr << "DetectNodesParameter(";
+				repr << "strConnectivity='" << param.strConnectivity << "', ";
+				repr << "diag_connect=" << (param.dcuparam.fDiagonalConnectivity ? "True" : "False") << ", ";
+				repr << "searchByMin=" << (param.dcuparam.fSearchByMinima ? "True" : "False") << ", ";
+				repr << "strSearchBy='" << param.dcuparam.ixSearchBy << "', ";
+				repr << "strSearchByThreshold='" << param.dcuparam.strSearchByThreshold << "', ";
+				repr << "dMaxLatitude=" << param.dcuparam.dMaxLatitude << ", ";
+				repr << "dMinLatitude=" << param.dcuparam.dMinLatitude << ", ";
+				repr << "dMinAbsLatitude=" << param.dcuparam.dMinAbsLatitude << ", ";
+				repr << "dMaxLongitude=" << param.dcuparam.dMaxLongitude << ", ";
+				repr << "dMinLongitude=" << param.dcuparam.dMinLongitude << ", ";
+				repr << "dMergeDist=" << param.dcuparam.dMergeDist << ", ";
+				repr << "nTimeStride=" << param.dcuparam.nTimeStride << ", ";
+				repr << "strTimeFilter='" << param.dcuparam.strTimeFilter << "', ";
+				repr << "strLatitudeName='" << param.dcuparam.strLatitudeName << "', ";
+				repr << "strLongitudeName='" << param.dcuparam.strLongitudeName << "', ";
+				repr << "fRegional=" << (param.dcuparam.fRegional ? "True" : "False") << ", ";
+				repr << "fOutputHeader=" << (param.dcuparam.fOutputHeader ? "True" : "False") << ", ";
+				repr << "fOutputSeconds=" << (param.dcuparam.fOutputSeconds ? "True" : "False") << ", ";
+				repr << "iVerbosityLevel=" << param.dcuparam.iVerbosityLevel << ", ";
+				repr << "strLogDir='" << param.strLogDir << "'";
+				repr << ")";
+				return repr.str();
+			})
+
 			;
 
 
 	// main function
 	m.def("DetectNodes", [](
-				const DetectNodesParameter& param) 
+				DetectNodesParameter& param) 
 		{
-			int iFile = 0; //placeholder value since iFile is not used in DetectCyclonesUnstructured
-			std::string strInputFile = param.vecInputFiles[0]; 
-			std::string strOutputFile = param.vecOutputFiles[0]; 
-			std::string strConnectivity = param.strConnectivity; 
-			DetectCyclonesUnstructured(iFile, strInputFile, strOutputFile, strConnectivity, const_cast<VariableRegistry&>(param.varreg), const_cast<DetectCyclonesParam&>(param.dcuparam));
+			// MPI_Init();
+			// int nMPIRank;
+			// MPI_Comm_rank(MPI_COMM_WORLD, &nMPIRank);
+
+			// int nMPISize;
+			// MPI_Comm_size(MPI_COMM_WORLD, &nMPISize);
+			
+			for (int f = 0; f < param.numInputFilesLines; f++) {
+				// if (f % nMPISize != nMPIRank) {
+				// 	continue;
+				// }
+
+				// open the log file, log file name is log000000.txt, log000001.txt, ... where 000000 is the file index
+				char szFileIndex[32];
+				snprintf(szFileIndex, 32, "%06i", f);	
+				std::string strLogFile = param.strLogDir + "/log" + std::string(szFileIndex) + ".txt";
+				param.dcuparam.fpLog = fopen(strLogFile.c_str(), "w");
+
+				std::string strInputFile = param.vecInputFiles[f]; 
+				std::string strOutputFile = param.vecOutputFiles[f]; 
+				std::string strConnectivity = param.strConnectivity; 
+				DetectCyclonesUnstructured(f, strInputFile, strOutputFile, strConnectivity, const_cast<VariableRegistry&>(param.varreg), const_cast<DetectCyclonesParam&>(param.dcuparam));
+				// close the log file
+				fclose(param.dcuparam.fpLog);
+			}
+			// MPI_Finalize();
 		}, 
 		py::arg("DetectNodesParameter")
 	);
