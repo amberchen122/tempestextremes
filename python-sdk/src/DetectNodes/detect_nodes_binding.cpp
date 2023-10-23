@@ -93,6 +93,17 @@ class DetectNodesParameter {
 			} else if (strInputFileList != "") {
 				this->vecInputFiles.FromFile(strInputFileList, true);
 				this->vecOutputFiles.FromFile(strOutputFileList);
+				if (this->vecOutputFiles.size() == 0) {
+					/* default output file names
+					if out_data_list is not specified, then the output files are named as out000000.dat, out000001.dat, ... */
+					for (int f = 0; f < this->numInputFilesLines; f++) {
+						char szFileIndex[32];
+						snprintf(szFileIndex, 32, "%06i", f);	
+						std::string strOutputFile = "out" + std::string(szFileIndex) + ".dat";
+						this->vecOutputFiles.push_back(strOutputFile);
+					}
+					
+				}
 			} else {
 				_EXCEPTIONT("Either in_data or in_data_list must be specified");
 			}
@@ -137,6 +148,14 @@ class DetectNodesParameter {
 			this->dcuparam.iVerbosityLevel = iVerbosityLevel;
 
 			this->strLogDir = strLogDir;
+
+			// initialize vecLogFiles
+			for (int f = 0; f < this->numInputFilesLines; f++) {
+				char szFileIndex[32];
+				snprintf(szFileIndex, 32, "%06i", f);	
+				std::string strLogFile = this->strLogDir + "/log" + std::string(szFileIndex) + ".txt";
+				this->vecLogFiles.push_back(strLogFile);
+			}
 		}
 
 		~DetectNodesParameter() {
@@ -152,6 +171,7 @@ class DetectNodesParameter {
 		int numInputFilesLines;
 		std::string strConnectivity;
 		std::string strLogDir;
+		std::vector<std::string> vecLogFiles;
 	
 	private:
 		// perform validation on longitudes and latitudes
@@ -276,11 +296,11 @@ PYBIND11_MODULE(DetectNodes, m) {
 		
 		),
 			"DetectNodesParameter constructor", // TODO: add docstring
-            py::arg("strInputFile") = "",
-            py::arg("strOutputFile") = "out.dat",
-            py::arg("strInputFileList") = "",
-            py::arg("strOutputFileList") = "",
-            py::arg("strConnectivity") = "",
+            py::arg("InputFile") = "",
+            py::arg("OutputFile") = "out.dat",
+            py::arg("InputFileList") = "",
+            py::arg("OutputFileList") = "",
+            py::arg("ConnectivityFile") = "",
             py::arg("diag_connect") = false,
             py::arg("searchByMin") = false,
             py::arg("strSearchBy") = "PSL",
@@ -342,36 +362,23 @@ PYBIND11_MODULE(DetectNodes, m) {
 			;
 
 
-	// main function
-	m.def("DetectNodes", [](
-				DetectNodesParameter& param) 
-		{
-			// MPI_Init();
-			// int nMPIRank;
-			// MPI_Comm_rank(MPI_COMM_WORLD, &nMPIRank);
-
-			// int nMPISize;
-			// MPI_Comm_size(MPI_COMM_WORLD, &nMPISize);
-			
+	// main function calling DetectCyclonesUnstructured for each file in DetectNodesParameter.vecInputFiles
+	m.def("DetectNodes", 
+		[](DetectNodesParameter& param){
 			for (int f = 0; f < param.numInputFilesLines; f++) {
-				// if (f % nMPISize != nMPIRank) {
-				// 	continue;
-				// }
 
-				// open the log file, log file name is log000000.txt, log000001.txt, ... where 000000 is the file index
-				char szFileIndex[32];
-				snprintf(szFileIndex, 32, "%06i", f);	
-				std::string strLogFile = param.strLogDir + "/log" + std::string(szFileIndex) + ".txt";
-				param.dcuparam.fpLog = fopen(strLogFile.c_str(), "w");
+				// open the log file
+				param.dcuparam.fpLog = fopen(param.vecLogFiles[f].c_str(), "w");
 
-				std::string strInputFile = param.vecInputFiles[f]; 
-				std::string strOutputFile = param.vecOutputFiles[f]; 
-				std::string strConnectivity = param.strConnectivity; 
-				DetectCyclonesUnstructured(f, strInputFile, strOutputFile, strConnectivity, const_cast<VariableRegistry&>(param.varreg), const_cast<DetectCyclonesParam&>(param.dcuparam));
+				DetectCyclonesUnstructured(f, 
+											param.vecInputFiles[f], 
+											param.vecOutputFiles[f], 
+											param.strConnectivity, 
+											const_cast<VariableRegistry&>(param.varreg), 
+											const_cast<DetectCyclonesParam&>(param.dcuparam));
 				// close the log file
 				fclose(param.dcuparam.fpLog);
 			}
-			// MPI_Finalize();
 		}, 
 		py::arg("DetectNodesParameter")
 	);
