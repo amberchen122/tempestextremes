@@ -3,42 +3,10 @@ src/build/*
 
 src/depend/*
 
-*.swp
-
-*.nc
-
-*.txt
-
 *.o
 
 *.d
 
 *.a
 
-*.tar.gz
-
 bin/*
-
-test
-
-!python-sdk/test
-
-test/*.nc
-
-test/*.nc4
-
-test/*.dat
-
-test/*.txt
-
-test/*.g
-
-test/cfsr_tests
-
-test/*.eps
-
-test/*.png
-
-test/statfigs/*
-
-src/*
