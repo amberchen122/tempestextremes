@@ -260,8 +260,18 @@ PYBIND11_MODULE(DetectNodes, m) {
 			----------
 			connectivityFile (str) [""]: Path to a a connectivity file that describes the unstructured grid.
 			----------
+			diag_connect (bool) [False]: If True: when the data is on a structured grid, consider grid cells to be connected in the diagonal (across the vertex).
+			----------
+			Parameters for initially selecting candidate points (defined as local minima or local maxima).
+			searchByMin (bool) [False]: If True: search for local minima, otherwise search for local maxima.
+			searchBy (str) ["PSL"]: The variable to use for searching for local minima or maxima.
+			searchByThreshold (str) [""]: The threshold to use for searching for local minima or maxima. //TODO: Describe the default behavior if this is not specified.
+			----------
+			maxLatitude (float) [0.0]: The maximum latitude for candidate points. If maxLatitude and minLatitude are equal then these arguments are ignored.
+			minLatitude (float) [0.0]: The minimum latitude for candidate points. If maxLatitude and minLatitude are equal then these arguments are ignored.
 		)pbdoc")
-        .def(py::init([](const std::string& strInputFile,
+        .def(py::init([](//TODO: change the order of arguements
+						const std::string& strInputFile,
                          const std::string& strOutputFile,
                          const std::string& strInputFileList,
                          const std::string& strOutputFileList,
@@ -314,17 +324,17 @@ PYBIND11_MODULE(DetectNodes, m) {
 			py::arg("outputFileList") = "",
 			py::arg("logDir") = ".",
             py::arg("connectivityFile") = "",
-
-            py::arg("diag_connect") = false,
+            py::arg("diagConnect") = false,
             py::arg("searchByMin") = false,
-            py::arg("strSearchBy") = "PSL",
-            py::arg("strSearchByThreshold") = "",
-            py::arg("dMaxLatitude") = 0,
-            py::arg("dMinLatitude") = 0,
-            py::arg("dMinAbsLatitude") = 0,
-            py::arg("dMaxLongitude") = 0,
-            py::arg("dMinLongitude") = 0,
-            py::arg("dMergeDist") = 0,
+            py::arg("searchBy") = "PSL",
+            py::arg("searchByThreshold") = "",
+            py::arg("maxLatitude") = 0.0,
+            py::arg("minLatitude") = 0.0,
+            py::arg("minAbsLatitude") = 0.0,
+            py::arg("maxLongitude") = 0.0,
+            py::arg("minLongitude") = 0.0,
+            py::arg("mergeDist") = 0.0,
+
             py::arg("nTimeStride") = 1,
             py::arg("strTimeFilter") = "",
             py::arg("strLatitudeName") = "lat",
