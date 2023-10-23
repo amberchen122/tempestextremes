@@ -245,9 +245,21 @@ PYBIND11_MODULE(DetectNodes, m) {
 	// Expose the DetectNodesParameter class to python
 	py::class_<DetectNodesParameter>(m, "DetectNodesParameter", 
 		R"pbdoc(
-			DetectNodesParameter class is used for configuring the parameters required for node detection.
-			This class holds various configuration options and parameters used in the detection process.
-			These include input and output file paths, geographical parameters, and various detection options.
+			DetectNodesParameter class is used for configuring the parameters required for DeteNoodes function.
+			Parameters: 
+			----------
+			Parameters to specify input and output files, either InputFile or InputFileList must be specified:
+			Option 1: specify InputFile 
+			inputFile (str) [""]: A list of input data files in NetCDF format, separated by semicolons. Example: "input1.nc;input2.nc; ..." 
+			outputFile (str) ["out.dat"]): Path to the output nodefile to write from the detection procedure. Used if InputFile is specified.
+			Option 2: specify InputFileList
+			inputFileList (str) [""]: Path to a a text file containing the InputFile argument for a sequence of processing operations (one per line). Example: "input1.nc;input2.nc;\n input3.nc;input4.nc;\n ..."
+			outputFileList (str) [""]: Path to a text file containingan equal number of lines to InputFileList specifying the output nodefiles from each input datafile. If not specified, the output files are named as out000000.dat, out000001.dat, ...
+			----------
+			logDir (str) ["."]: Path to the directory where the log files will be written. The log files are named as log000000.txt, log000001.txt, ...
+			----------
+			connectivityFile (str) [""]: Path to a a connectivity file that describes the unstructured grid.
+			----------
 		)pbdoc")
         .def(py::init([](const std::string& strInputFile,
                          const std::string& strOutputFile,
@@ -296,11 +308,13 @@ PYBIND11_MODULE(DetectNodes, m) {
 		
 		),
 			"DetectNodesParameter constructor", // TODO: add docstring
-            py::arg("InputFile") = "",
-            py::arg("OutputFile") = "out.dat",
-            py::arg("InputFileList") = "",
-            py::arg("OutputFileList") = "",
-            py::arg("ConnectivityFile") = "",
+            py::arg("inputFile") = "",
+            py::arg("outputFile") = "out.dat",
+            py::arg("inputFileList") = "",
+			py::arg("outputFileList") = "",
+			py::arg("logDir") = ".",
+            py::arg("connectivityFile") = "",
+
             py::arg("diag_connect") = false,
             py::arg("searchByMin") = false,
             py::arg("strSearchBy") = "PSL",
@@ -319,7 +333,7 @@ PYBIND11_MODULE(DetectNodes, m) {
             py::arg("fOutputHeader") = false,
             py::arg("fOutputSeconds") = false,
             py::arg("iVerbosityLevel") = 0,
-			py::arg("strLogDir") = ".",
+			
             py::arg("closedContourOp") = py::list(),
 			py::arg("noClosedContourOp") = py::list(),
 			py::arg("thresholdOp") = py::list(),
