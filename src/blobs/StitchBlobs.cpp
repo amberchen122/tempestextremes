@@ -593,6 +593,9 @@ try {
 	// Minimum duration of blob
 	std::string strMinTime;
 
+	// Tag only
+	bool fTagOnly;
+
 	// Minimum percentage of the earlier blob that needs to be covered by the later blob
 	double dMinPercentOverlapPrev;
 
@@ -659,6 +662,7 @@ try {
 		CommandLineString(strOutputVariable, "outvar", "object_id");
 		CommandLineInt(nMinBlobSize, "minsize", 1);
 		CommandLineString(strMinTime, "mintime", "1");
+		CommandLineBool(fTagOnly, "tagonly");
 		CommandLineDoubleD(dMinPercentOverlapPrev, "min_overlap_prev", 0.0, "(%)")
 		CommandLineDoubleD(dMaxPercentOverlapPrev, "max_overlap_prev", 100.0, "(%)")
 		CommandLineDoubleD(dMinPercentOverlapNext, "min_overlap_next", 0.0, "(%)")
@@ -673,7 +677,6 @@ try {
 		CommandLineBool(fFlatten, "flatten");
 		CommandLineString(strLatitudeName, "latname","lat");
 		CommandLineString(strLongitudeName, "lonname","lon");
-		//CommandLineString(strTimeName, "timename", "time");
 		CommandLineString(strOutTimeUnits,"outtimeunits","");
 		CommandLineString(strThresholdCmd, "thresholdcmd", "");
 		CommandLineBool(fVerbose, "verbose");
@@ -743,6 +746,9 @@ try {
 	}
 
 	// Parse --mintime
+	if (fTagOnly && (strMinTime != "1")) {
+		_EXCEPTIONT("--tagonly and --mintime cannot be combined");
+	}
 	int nMinTime = 1;
 	double dMinTimeSeconds = 0.0;
 	if (STLStringHelper::IsIntegerIndex(strMinTime)) {
@@ -1477,6 +1483,11 @@ try {
 			for (int q = 0; q < vecPrevBlobTags.size(); q++) {
 
 				const LatLonBox<double> & boxQ = vecPrevBlobBoxesDeg[q];
+
+				// Check if tagonly
+				if (fTagOnly) {
+					continue;
+				}
 
 				// Check if bounding boxes overlap
 				if (!boxP.overlaps(boxQ)) {
