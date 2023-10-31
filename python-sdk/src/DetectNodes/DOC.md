@@ -21,7 +21,7 @@ DetectNodes function takes in DetectNodesParameter. It also take care of other c
 
 # List of DetectNodes available commands and their python arguements correspondance
 
-Note: Descriptions for the DetectNodes commands can be found on the [TE website](https://climate.ucdavis.edu/tempestextremes.php#DetectNodes) and are also included in the `py::class_`<DetectNodesParameter>`` description.
+Note: Descriptions for the DetectNodes commands can be found on the [TE website](https://climate.ucdavis.edu/tempestextremes.php#DetectNodes) and are also included in the `py::class<DetectNodesParameter>`  description.
 
 - --command_line `<type>` [default_value]
   - `pythonParameterName = default_value` (`type`)
