@@ -76,6 +76,8 @@ class DetectNodesParameter {
 			
 			// initialize vecInputFiles and vecOutputFiles
 			// building a unified interface for input and output files
+
+			// If in_data is specified, then the output file is specified by out_data
 			if (strInputFile != "") {
 				this->vecInputFiles.push_back(strInputFile);
 				this->vecOutputFiles.push_back(strOutputFile);
