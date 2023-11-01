@@ -122,6 +122,78 @@ Note: Descriptions for the DetectNodes commands can be found on the [TE website]
 - --verbosity `<integer>` [0]
   - `verbosityLevel = 0` (`int`)
 
+# `DetectNodesParameter` Class 
+
+This class is used for configuring the parameters required for `DeteNoodes` function.
+
+## Parameters to specify input and output files
+_Either `InputFile` or `InputFileList` must be specified._
+
+**Option 1: Specify `InputFile`**
+- `inputFile` (str) [""]: 
+  - A list of input data files in NetCDF format, separated by semicolons.
+  - Example: `input1.nc;input2.nc;...` 
+- `outputFile` (str) ["out.dat"]:
+  - Path to the output nodefile to write from the detection procedure.
+  - Used if `InputFile` is specified.
+
+**Option 2: Specify `InputFileList`**
+- `inputFileList` (str) [""]:
+  - Path to a text file containing the `InputFile` argument for a sequence of processing operations (one per line).
+  - Example: `input1.nc;input2.nc;\n input3.nc;input4.nc;\n...`
+- `outputFileList` (str) [""]:
+  - Path to a text file containing an equal number of lines to `InputFileList` specifying the output nodefiles from each input datafile.
+  - If not specified, the output files are named as `out000000.dat`, `out000001.dat`, ...
+
+## Input specification parameters
+- `latitudeName` (str) ["lat"]: Name of the latitude dimension.
+- `longitudeName` (str) ["lon"]: Name of the longitude dimension.
+
+## Output specification parameters
+- `outputHeader` (bool) [False]: If True, output a header at the beginning of the output file indicating the columns of the file.
+- `outputSeconds` (bool) [False]: If True, output second of the day as part of the timestamp. Otherwise, output will report hour of the day.
+- `outputCmd` (List[str]) []:
+  - List of strings specifying the output commands to include additional columns in the output file.
+  - Example: `["PRMSL_L101,max,0", "_VECMAG(U_GRD_L100,V_GRD_L100),max,4", "HGT_L1,max,0"]`
+
+## Logfile 
+- `logDir` (str) ["."]: Path to the directory where the log files will be written. The log files are named as `log000000.txt`, `log000001.txt`, ...
+
+## Additional Parameters
+- `connectivityFile` (str) [""]: Path to a connectivity file that describes the unstructured grid.
+- `diag_connect` (bool) [False]: If True, when the data is on a structured grid, consider grid cells to be connected in the diagonal (across the vertex).
+
+## Parameters for initially selecting candidate points
+(Defined as local minima or local maxima)
+- `searchByMin` (bool) [False]: If True, search for local minima, otherwise search for local maxima.
+- `searchBy` (str) ["PSL"]: The variable to use for searching for local minima or maxima.
+- `searchByThreshold` (str) [""]: The threshold to use for searching for local minima or maxima. 
+  - **TODO**: Describe the default behavior if this is not specified.
+
+## Geographic Parameters
+- `maxLatitude` (float) [0.0], `minLatitude` (float) [0.0], `minAbsLatitude` (float) [0.0]
+- `maxLongitude` (float) [0.0], `minLongitude` (float) [0.0]
+- `regional` (bool) [False]: Used to indicate that a given latitude-longitude grid should not be periodic in the longitudinal direction.
+
+## Advanced Parameters
+- `mergeDist` (float) [0.0]: 
+  - DetectNodes merges candidate points with a distance (in degrees great-circle-distance) shorter than the specified value.
+  - Among two candidates within the merge distance, only the candidate with the lowest(if `searchByMin`=True)/highest(if `searchByMin`=False) value of the `searchBy` field are retained.
+
+## Time Parameters
+- `timeStride` (int) [1]: **Deprecated** Only examine discrete times at the given stride. Consider `--timefilter` instead.
+- `timeFilter` (str) [""]:
+  - A regular expression used to match only those time values to be retained. 
+  - Example: `"3hr"`, `"6hr"`, `"daily"`
+
+## Eliminate Candidates
+Detailed parameters related to eliminating candidates based on contour commands and threshold commands are provided.
+
+## Verbosity
+- `verbosityLevel` (int) [0]: Verbosity level of execution.
+
+
+<!-- TODO -->
 print(DetectNodesParameter) should print
 
 - input files / input files list
