@@ -69,47 +69,51 @@ class DetectNodesParameter {
 			if (dcuparam.nTimeStride != 1) {
 				//Announce("WARNING: --timestride is deprecated.  Consider using --timefilter instead.");
 				if (dcuparam.strTimeFilter != "") {
-					_EXCEPTIONT("Only one of --timestride and --timefilter can be used.");
+					_EXCEPTIONT("Only one of timeStride and timeFilter can be used.");
 				}
 			}
 	// TODO: Here is where i left off 10:25 PM 10/26/2023
 			
-			// initialize vecInputFiles and vecOutputFiles
-			// building a unified interface for input and output files
+			// ensure that only one of inputFile and inputFileList is specified
+			if (strInputFile != "" && strInputFileList != "")
+			{
+				_EXCEPTIONT("Only one of inputFile and inputFileList can be specified");
+			} 
+			if (strInputFile == "" and strInputFileList == "")
+			{
+				_EXCEPTIONT("No input data file inputFile or inputFileList specified");
+			}
+			// ensure that only one of outputFile and outputFileList is specified
+			if (strOutputFile != "" && strOutputFileList != "")
+			{
+				_EXCEPTIONT("Only one of outputFile and outputFileList can be specified");
+			} 
 
-			// If in_data is specified, then the output file is specified by out_data
-			if (strInputFile != "") {
+			/* initialize vecInputFiles and vecOutputFiles
+			building a unified interface for input and output files
+			If in_data is specified, then the output file is specified by out_data */
+			if (strInputFile != "") {	// option 1: specify InputFile
 				this->vecInputFiles.push_back(strInputFile);
-				this->vecOutputFiles.push_back(strOutputFile);
-			} else if (strInputFileList != "") {
+				this->vecOutputFiles.push_back(strOutputFile);    // strOutputFile has default value "out.dat"
+			} else if (strInputFileList != "") {	// option 2: specify InputFileList
 				this->vecInputFiles.FromFile(strInputFileList, true);
 				this->vecOutputFiles.FromFile(strOutputFileList);
-				if (this->vecOutputFiles.size() == 0) {
-					/* default output file names
-					if out_data_list is not specified, then the output files are named as out000000.dat, out000001.dat, ... */
+				if (this->vecOutputFiles.size() == 0) {    
+					// if outputFileList is not specified, use default output file names: out000000.dat, out000001.dat, ...
 					for (int f = 0; f < this->numInputFilesLines; f++) {
 						char szFileIndex[32];
-						snprintf(szFileIndex, 32, "%06i", f);	
+						snprintf(szFileIndex, 32, "%06i", f);    
 						std::string strOutputFile = "out" + std::string(szFileIndex) + ".dat";
 						this->vecOutputFiles.push_back(strOutputFile);
 					}
-					
-				}
-			} else {
-				_EXCEPTIONT("Either in_data or in_data_list must be specified");
-			}
-		
-			if (this->vecInputFiles.size() != this->vecOutputFiles.size()) {
-				_EXCEPTIONT("Number of input files must equal number of output files");
-			}
+				} else if (this->vecInputFiles.size() != this->vecOutputFiles.size()) { // if outputFileList is specified, ensure that the number of input files equals the number of output files
+					_EXCEPTIONT("inputFileList must match outputFileList");
+				}    
+			} 
 
 			this->numInputFilesLines = this->vecInputFiles.size();
 
-			this->strConnectivity = strConnectivity;              
-
-			// initialize detectCyclonesParam
-			this->dcuparam.fDiagonalConnectivity = diag_connect;
-
+			// initialize searchByMinima, ixSearchBy, strSearchByThreshold
 			this->dcuparam.fSearchByMinima = searchByMin;
 			this->dcuparam.ixSearchBy = varreg.FindOrRegister(strSearchBy);
 			this->dcuparam.strSearchByThreshold = strSearchByThreshold;
@@ -128,7 +132,8 @@ class DetectNodesParameter {
 			this->dcuparam.fOutputHeader = fOutputHeader;
 			this->dcuparam.fOutputSeconds = fOutputSeconds;
 			this->dcuparam.iVerbosityLevel = iVerbosityLevel;
-
+			this->dcuparam.fDiagonalConnectivity = diag_connect;
+			this->strConnectivity = strConnectivity;
 			this->strLogDir = strLogDir;
 
 			// initialize vecLogFiles
@@ -232,79 +237,79 @@ PYBIND11_MODULE(DetectNodes, m) {
 	// Expose the DetectNodesParameter class to python
 	py::class_<DetectNodesParameter>(m, "DetectNodesParameter", 
 		R"pbdoc(
-			DetectNodesParameter class is used for configuring the parameters required for DeteNoodes function.
-			Parameters: 
-			------------------------------------------------------------------------------------------
-			Parameters to specify input and output files, either InputFile or InputFileList must be specified:
-			Option 1: specify InputFile 
-			inputFile (str) [""]: A list of input data files in NetCDF format, separated by semicolons. Example: "input1.nc;input2.nc; ..." 
-			outputFile (str) ["out.dat"]): Path to the output nodefile to write from the detection procedure. Used if InputFile is specified.
-			Option 2: specify InputFileList
-			inputFileList (str) [""]: Path to a a text file containing the InputFile argument for a sequence of processing operations (one per line). Example: "input1.nc;input2.nc;\n input3.nc;input4.nc;\n ..."
-			outputFileList (str) [""]: Path to a text file containingan equal number of lines to InputFileList specifying the output nodefiles from each input datafile. If not specified, the output files are named as out000000.dat, out000001.dat, ...
-			------------------------------------------------------------------------------------------
-			Input specification parameters
-			latitudeName (str) ["lat"]: Name of the latitude dimension.
-			longitudeName (str) ["lon"]: Name of the longitude dimension.
-			------------------------------------------------------------------------------------------
-			Output specification parameters
-			outputHeader (bool) [False]: If True: output a header at the beginning of the output file indicating the columns of the file.
-			outputSeconds (bool) [False]: If True: output second of the day as part of the timestamp. Otherwise, output will report hour of the day.
-			outputCmd (List[str]) []: List of strings specifying the output commands to include additional columns in the output file. Each output command takes the form "var,op,dist". These arguments are as follows.
-				var is the name of the variable used for output.
-				op is the operator that is applied over all points within the specified distance of the candidate (options include max, min, avg, maxdist, mindist).
-				dist is the great-circle distance away from the candidate wherein the operator is applied.
-			Example: ["PRMSL_L101,max,0", "_VECMAG(U_GRD_L100,V_GRD_L100),max,4", "HGT_L1,max,0"]
-			------------------------------------------------------------------------------------------
-			Logfile 
-			logDir (str) ["."]: Path to the directory where the log files will be written. The log files are named as log000000.txt, log000001.txt, ...
-			------------------------------------------------------------------------------------------
-			connectivityFile (str) [""]: Path to a a connectivity file that describes the unstructured grid.
-			------------------------------------------------------------------------------------------
-			diag_connect (bool) [False]: If True: when the data is on a structured grid, consider grid cells to be connected in the diagonal (across the vertex).
-			------------------------------------------------------------------------------------------
-			Parameters for initially selecting candidate points (defined as local minima or local maxima).
-			searchByMin (bool) [False]: If True: search for local minima, otherwise search for local maxima.
-			searchBy (str) ["PSL"]: The variable to use for searching for local minima or maxima.
-			searchByThreshold (str) [""]: The threshold to use for searching for local minima or maxima. //TODO: Describe the default behavior if this is not specified.
-			------------------------------------------------------------------------------------------
-			maxLatitude (float) [0.0]: The maximum latitude for candidate points. If maxLatitude and minLatitude are equal then these arguments are ignored.
-			minLatitude (float) [0.0]: The minimum latitude for candidate points. If maxLatitude and minLatitude are equal then these arguments are ignored.
-			minAbsLatitude (float) [0.0]: The minimum absolute value of latitude for candidate points. This argument has no effect if set to zero.
-			maxLongitude (float) [0.0]: The maximum longitude for candidate points. As longitude is a periodic dimension, when regional is set to False (default value) minLongitude may be larger than maxLongitude. If maxLongitude and maxLongitude are equal then these arguments are ignored.
-			minLongitude (float) [0.0]: The minimum longitude for candidate points. As longitude is a periodic dimension, when regional is set to False (default value) minLongitude may be larger than maxLongitude. If maxLongitude and maxLongitude are equal then these arguments are ignored.
-			regional (bool) [False]: Used to indicate that a given latitude-longitude grid should not be periodic in the longitudinal direction.
-			------------------------------------------------------------------------------------------
-			mergeDist (float) [0.0]: DetectNodes merges candidate points with a distance (in degrees great-circle-distance) shorter than the specified value. Among two candidates within the merge distance, only the candidate with the lowest(if searchByMin=True)/highest(if searchByMin=False) value of the searchBy field are retained.
-			------------------------------------------------------------------------------------------
-			timeStride (int) [1]: [Deprecated] Only examine discrete times at the given stride. Consider --timefilter instead.
-			timeFilter (str) [""]: A regular expression used to match only those time values to be retained. Several default values are available as follows.
-				"3hr": filter every 3 hourly (equivalent to "....-..-.. (00|03|06|09|12|15|18|21):00:00").
-				"6hr": filter every 6 hourly (equivalent to "....-..-.. (00|06|12|18):00:00").
-				"daily": filter daily (equivalent to "....-..-.. 00:00:00").
-			------------------------------------------------------------------------------------------
-			Eliminates candidates
-			closedContourCmd (List[str]) []: List of strings specifying the closed contour commands to eliminate candidates. Eliminate candidates if they do not have a closed contour. 
-			The closed contour is determined by breadth first search: if any paths exist from the candidate point (or nearby minima/maxima if minmaxdist is specified) that reach the specified distance before achieving the specified delta then we say no closed contour is present. 
-			Each closed contour command takes the form "var,delta,dist,minmaxdist". These arguments are as follows. 
-				var is the name of the variable used for the contour search.
-				dist is the great-circle distance (in degrees) from the pivot within which the closedcontour criteria must be satisfied.
-				delta is the amount by which the field must change from the pivot value. If positive (negative) the field must increase (decrease) by this value along the contour.
-				minmaxdist is the great-circle distance away from the candidate to search for the minima/maxima. If delta is positive (negative), the pivot is a local minimum (maximum).
+			DetectNodesParameter class is used for configuring the parameters required for DeteNoodes function.\n
+			Parameters:\n
+			------------------------------------------------------------------------------------------\n
+			Parameters to specify input and output files, either InputFile or InputFileList must be specified:\n
+			Option 1: specify InputFile\n
+			inputFile (str) [""]: A list of input data files in NetCDF format, separated by semicolons. Example: "input1.nc;input2.nc; ..."\n
+			outputFile (str) ["out.dat"]): Path to the output nodefile to write from the detection procedure. Used if InputFile is specified.\n
+			Option 2: specify InputFileList\n
+			inputFileList (str) [""]: Path to a a text file containing the InputFile argument for a sequence of processing operations (one per line). Example: "input1.nc;input2.nc;\n input3.nc;input4.nc;\n ..."\n
+			outputFileList (str) [""]: Path to a text file containingan equal number of lines to InputFileList specifying the output nodefiles from each input datafile. If not specified, the output files are named as out000000.dat, out000001.dat, ...\n
+			------------------------------------------------------------------------------------------\n
+			Input specification parameters\n
+			latitudeName (str) ["lat"]: Name of the latitude dimension.\n
+			longitudeName (str) ["lon"]: Name of the longitude dimension.\n
+			------------------------------------------------------------------------------------------\n
+			Output specification parameters\n
+			outputHeader (bool) [False]: If True: output a header at the beginning of the output file indicating the columns of the file.\n
+			outputSeconds (bool) [False]: If True: output second of the day as part of the timestamp. Otherwise, output will report hour of the day.\n
+			outputCmd (List[str]) []: List of strings specifying the output commands to include additional columns in the output file. Each output command takes the form "var,op,dist". These arguments are as follows.\n
+				var is the name of the variable used for output.\n
+				op is the operator that is applied over all points within the specified distance of the candidate (options include max, min, avg, maxdist, mindist).\n
+				dist is the great-circle distance away from the candidate wherein the operator is applied.\n
+			Example: ["PRMSL_L101,max,0", "_VECMAG(U_GRD_L100,V_GRD_L100),max,4", "HGT_L1,max,0"]\n
+			------------------------------------------------------------------------------------------\n
+			Logfile\n
+			logDir (str) ["."]: Path to the directory where the log files will be written. The log files are named as log000000.txt, log000001.txt, ...\n
+			------------------------------------------------------------------------------------------\n
+			connectivityFile (str) [""]: Path to a a connectivity file that describes the unstructured grid.\n
+			------------------------------------------------------------------------------------------\n
+			diag_connect (bool) [False]: If True: when the data is on a structured grid, consider grid cells to be connected in the diagonal (across the vertex).\n
+			------------------------------------------------------------------------------------------\n
+			Parameters for initially selecting candidate points (defined as local minima or local maxima).\n
+			searchByMin (bool) [False]: If True: search for local minima, otherwise search for local maxima.\n
+			searchBy (str) ["PSL"]: The variable to use for searching for local minima or maxima.\n
+			searchByThreshold (str) [""]: The threshold to use for searching for local minima or maxima.\n
+			------------------------------------------------------------------------------------------\n
+			maxLatitude (float) [0.0]: The maximum latitude for candidate points. If maxLatitude and minLatitude are equal then these arguments are ignored.\n
+			minLatitude (float) [0.0]: The minimum latitude for candidate points. If maxLatitude and minLatitude are equal then these arguments are ignored.\n
+			minAbsLatitude (float) [0.0]: The minimum absolute value of latitude for candidate points. This argument has no effect if set to zero.\n
+			maxLongitude (float) [0.0]: The maximum longitude for candidate points. As longitude is a periodic dimension, when regional is set to False (default value) minLongitude may be larger than maxLongitude. If maxLongitude and maxLongitude are equal then these arguments are ignored.\n
+			minLongitude (float) [0.0]: The minimum longitude for candidate points. As longitude is a periodic dimension, when regional is set to False (default value) minLongitude may be larger than maxLongitude. If maxLongitude and maxLongitude are equal then these arguments are ignored.\n
+			regional (bool) [False]: Used to indicate that a given latitude-longitude grid should not be periodic in the longitudinal direction.\n
+			------------------------------------------------------------------------------------------\n
+			mergeDist (float) [0.0]: DetectNodes merges candidate points with a distance (in degrees great-circle-distance) shorter than the specified value. Among two candidates within the merge distance, only the candidate with the lowest(if searchByMin=True)/highest(if searchByMin=False) value of the searchBy field are retained.\n
+			------------------------------------------------------------------------------------------\n
+			timeStride (int) [1]: [Deprecated] Only examine discrete times at the given stride. Consider --timefilter instead.\n
+			timeFilter (str) [""]: A regular expression used to match only those time values to be retained. Several default values are available as follows.\n
+				"3hr": filter every 3 hourly (equivalent to "....-..-.. (00|03|06|09|12|15|18|21):00:00").\n
+				"6hr": filter every 6 hourly (equivalent to "....-..-.. (00|06|12|18):00:00").\n
+				"daily": filter daily (equivalent to "....-..-.. 00:00:00").\n
+			------------------------------------------------------------------------------------------\n
+			Eliminates candidates\n
+			closedContourCmd (List[str]) []: List of strings specifying the closed contour commands to eliminate candidates. Eliminate candidates if they do not have a closed contour.\n
+			The closed contour is determined by breadth first search: if any paths exist from the candidate point (or nearby minima/maxima if minmaxdist is specified) that reach the specified distance before achieving the specified delta then we say no closed contour is present.\n
+			Each closed contour command takes the form "var,delta,dist,minmaxdist". These arguments are as follows.\n
+				var is the name of the variable used for the contour search.\n
+				dist is the great-circle distance (in degrees) from the pivot within which the closedcontour criteria must be satisfied.\n
+				delta is the amount by which the field must change from the pivot value. If positive (negative) the field must increase (decrease) by this value along the contour.\n
+				minmaxdist is the great-circle distance away from the candidate to search for the minima/maxima. If delta is positive (negative), the pivot is a local minimum (maximum).\n
+			Example: ["PRMSL_L101,200.,4,0", "TMP_L100,-0.4,8.0,1.1"]\n
+			-\n
+			noClosedContourCmd (List[str]) []: List of strings specifying the no closed contour commands. As closedContourCmd, except it eliminates candidates if a closed contour is present.\n
 			Example: ["PRMSL_L101,200.,4,0", "TMP_L100,-0.4,8.0,1.1"]
-
-			noClosedContourCmd (List[str]) []: List of strings specifying the no closed contour commands. As closedContourCmd, except it eliminates candidates if a closed contour is present.
-			Example: ["PRMSL_L101,200.,4,0", "TMP_L100,-0.4,8.0,1.1"]
-
-			thresholdCmd (List[str]) []: List of strings specifying the threshold commands to eliminate candidates. Eliminate candidates that do not satisfy a threshold criteria (there must exist a point within a given distance of the candidate that satisfies a given equality or inequality). 
-			Search is performed by breadth-first search over the grid. Each threshold command takes the form "var,op,value,dist". These arguments are as follows.
-				var is the name of the variable used for the thresholding.
-				op is the operator that must be satisfied for threshold (options include >,>=,<,<=,=,!=).
-				value is the value on the right-hand-side of the comparison.
-				dist is the great-circle distance away from the candidate to search for a point that satisfies the threshold.
-			Example: ["PRMSL_L101,>,100000,4", "TMP_L100,<=,273.15,8.0"]
-			------------------------------------------------------------------------------------------
-			verbosityLevel (int) [0]: Verbosity level of execution.
+			-\n
+			thresholdCmd (List[str]) []: List of strings specifying the threshold commands to eliminate candidates. Eliminate candidates that do not satisfy a threshold criteria (there must exist a point within a given distance of the candidate that satisfies a given equality or inequality).\n
+			Search is performed by breadth-first search over the grid. Each threshold command takes the form "var,op,value,dist". These arguments are as follows.\n
+				var is the name of the variable used for the thresholding.\n
+				op is the operator that must be satisfied for threshold (options include >,>=,<,<=,=,!=).\n
+				value is the value on the right-hand-side of the comparison.\n
+				dist is the great-circle distance away from the candidate to search for a point that satisfies the threshold.\n
+			Example: ["PRMSL_L101,>,100000,4", "TMP_L100,<=,273.15,8.0"]\n
+			------------------------------------------------------------------------------------------\n
+			verbosityLevel (int) [0]: Verbosity level of execution.\n
 		)pbdoc")
         .def(
 			// lambda function to initialize the DetectNodesParameter class
@@ -379,7 +384,7 @@ PYBIND11_MODULE(DetectNodes, m) {
 					iVerbosityLevel,
 					strLogDir);
 
-				// Set the pointers after parsing the operations
+				// parse the outputCmd, closedContourCmd, noClosedContourCmd, and thresholdCmd commands and set the corresponding parameters in DetectNodesParameter
 				param.dcuparam.pvecClosedContourOp = parseOperations<ClosedContourOp>(closedContourCmd, param.varreg);
 				param.dcuparam.pvecNoClosedContourOp = parseOperations<ClosedContourOp>(noClosedContourCmd, param.varreg);
 				param.dcuparam.pvecThresholdOp = parseOperations<ThresholdOp>(thresholdCmd, param.varreg);
@@ -433,36 +438,87 @@ PYBIND11_MODULE(DetectNodes, m) {
 			"Constructor for DetectNodesParameter class." //TODO: revise docstring
 		)
 
-		// TODO: add setter for the above parameters
-		// TODO add __repr__ for the class
 		.def("__repr__", [](const DetectNodesParameter &param) {
 			std::stringstream repr;
-
-			// TODO: describe how output will be written to file (one on one mapping of vecInputFiles and vecOutputFiles)
 			
+			repr << "You have initialized the DetectNodesParameter class with the following parameters:\n";
 
-			repr << "DetectNodesParameter(";
-			repr << "strConnectivity='" << param.strConnectivity << "', ";
-			repr << "diag_connect=" << (param.dcuparam.fDiagonalConnectivity ? "True" : "False") << ", ";
-			repr << "searchByMin=" << (param.dcuparam.fSearchByMinima ? "True" : "False") << ", ";
-			repr << "strSearchBy='" << param.dcuparam.ixSearchBy << "', ";
-			repr << "strSearchByThreshold='" << param.dcuparam.strSearchByThreshold << "', ";
-			repr << "dMaxLatitude=" << param.dcuparam.dMaxLatitude << ", ";
-			repr << "dMinLatitude=" << param.dcuparam.dMinLatitude << ", ";
-			repr << "dMinAbsLatitude=" << param.dcuparam.dMinAbsLatitude << ", ";
-			repr << "dMaxLongitude=" << param.dcuparam.dMaxLongitude << ", ";
-			repr << "dMinLongitude=" << param.dcuparam.dMinLongitude << ", ";
-			repr << "dMergeDist=" << param.dcuparam.dMergeDist << ", ";
-			repr << "nTimeStride=" << param.dcuparam.nTimeStride << ", ";
-			repr << "strTimeFilter='" << param.dcuparam.strTimeFilter << "', ";
-			repr << "strLatitudeName='" << param.dcuparam.strLatitudeName << "', ";
-			repr << "strLongitudeName='" << param.dcuparam.strLongitudeName << "', ";
-			repr << "fRegional=" << (param.dcuparam.fRegional ? "True" : "False") << ", ";
-			repr << "fOutputHeader=" << (param.dcuparam.fOutputHeader ? "True" : "False") << ", ";
-			repr << "fOutputSeconds=" << (param.dcuparam.fOutputSeconds ? "True" : "False") << ", ";
-			repr << "iVerbosityLevel=" << param.dcuparam.iVerbosityLevel << ", ";
-			repr << "strLogDir='" << param.strLogDir << "'";
-			repr << ")";
+			// input and output files
+			for (size_t i = 0; i < param.numInputFilesLines; i++)
+			{
+				repr << "InputFile: " << param.vecInputFiles[i] << "\n";
+				repr << "OutputFile: " << param.vecOutputFiles[i] << "\n";
+				repr << "Logfile: " << param.vecLogFiles[i] << "\n";
+			}
+
+			// lat and lon names
+			repr << "Latitude Name: " << param.dcuparam.strLatitudeName << "\n";
+			repr << "Longitude Name: " << param.dcuparam.strLongitudeName << "\n";
+
+			// output specification parameters
+			repr << "Output Header: " << (param.dcuparam.fOutputHeader ? "True" : "False") << "\n";
+			repr << "Output Seconds: " << (param.dcuparam.fOutputSeconds ? "True" : "False") << "\n";
+			// TODO: print outputCmd
+			// repr << "Output Commands: \n";
+			// repr << "var,op,dist\n";
+			// for (const auto& op : *param.dcuparam.pvecOutputOp) {
+			// 	repr << op.ToString() << "\n";
+			// }
+
+			// connectivity file
+			repr << "Connectivity File: " << param.strConnectivity << "\n";
+
+			// diag_connect
+			repr << "Diagonal Connectivity: " << (param.dcuparam.fDiagonalConnectivity ? "True" : "False") << "\n";
+
+			// searchByMin, searchBy, searchByThreshold
+			if (param.dcuparam.fSearchByMinima) {
+				repr << "Searching By Minima\n";
+			} else {
+				repr << "Searching By Maxima\n";
+			}
+			repr << "Search By: " << param.dcuparam.ixSearchBy << "\n";
+			repr << "Search By Threshold: " << param.dcuparam.strSearchByThreshold << "\n";
+
+			// maxLatitude, minLatitude, minAbsLatitude, maxLongitude, minLongitude, regional
+			repr << "Max Latitude: " << param.dcuparam.dMaxLatitude << "\n";
+			repr << "Min Latitude: " << param.dcuparam.dMinLatitude << "\n";
+			repr << "Min Abs Latitude: " << param.dcuparam.dMinAbsLatitude << "\n";
+			repr << "Max Longitude: " << param.dcuparam.dMaxLongitude << "\n";
+			repr << "Min Longitude: " << param.dcuparam.dMinLongitude << "\n";
+			repr << "Regional: " << (param.dcuparam.fRegional ? "True" : "False") << "\n";
+
+			// mergeDist
+			repr << "Merge Distance: " << param.dcuparam.dMergeDist << "\n";
+
+			// timeStride, timeFilter
+			if (param.dcuparam.nTimeStride != 1) {
+				repr << "[Deprecated] Time Stride: " << param.dcuparam.nTimeStride << "\n";
+			} else {
+				repr << "Time Filter: " << param.dcuparam.strTimeFilter << "\n";
+			}
+
+			// TODO: print closedContourCmd, noClosedContourCmd, thresholdCmd, how to extract the information from pointer?
+			// closedContourCmd, noClosedContourCmd, thresholdCmd
+			// repr << "Closed Contour Commands: \n";
+			// repr << "var,delta,dist,minmaxdist\n";
+			// for (const auto& op : *param.dcuparam.pvecClosedContourOp) {
+			// 	repr << op.ToString() << "\n";
+			// }
+			// repr << "No Closed Contour Commands: \n";
+			// repr << "var,delta,dist,minmaxdist\n";
+			// for (const auto& op : *param.dcuparam.pvecNoClosedContourOp) {
+			// 	repr << op.ToString() << "\n";
+			// }
+			// repr << "Threshold Commands: \n";
+			// repr << "var,op,value,dist\n";
+			// for (const auto& op : *param.dcuparam.pvecThresholdOp) {
+			// 	repr << op.ToString() << "\n";
+			// }
+
+			// verbosityLevel
+			repr << "Verbosity Level: " << param.dcuparam.iVerbosityLevel << "\n";
+
 			return repr.str();
 		})
 		;

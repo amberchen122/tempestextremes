@@ -19,10 +19,17 @@ a)),-58.8,6.5,1.0" --mergedist 6.0 --outputcmd "MSL,min,0; _VECMAG(VAR_10U,VAR_
 
 
 # Create a DetectNodes.DetectCyclonesParam object
-param = DetectNodes.DetectNodesParameter(strInputFile = "./test/cn_files/outCSne30_test2.nc", 
-                                         strOutputFile = "out.dat", searchByMin = True, strSearchBy = "MSL", strTimeFilter = "6hr", strLatitudeName = "lat", 
-                                         strLongitudeName = "lon", dMergeDist = 6.0,
-                                        )
+param = DetectNodes.DetectNodesParameter(
+    inputFile="./test/cn_files/outCSne30_test2.nc",
+    outputFile="out.dat",
+    searchByMin=True,
+    searchBy='MSL',
+    timeFilter='6hr',
+    latitudeName='lat',
+    longitudeName='lon',
+    mergeDist=6.0
+)
+
 
 print(param)
 
