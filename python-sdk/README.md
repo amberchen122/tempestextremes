@@ -8,18 +8,6 @@ This document outlines the design for building a Python SDK/interface for the Te
 
 TempestExtremes is a comprehensive toolset designed for the analysis of extreme weather events. The codebase is primarily written in C++ and provides a set of executables for various analyses. The aim is to extend its usability to the Python community.
 
-## 3. Requirements
-
-- **Seamless Integration**: The Python SDK should provide a straightforward interface, mirroring the functionalities of the C++ executables.
-
-- **Performance**: The interface should be efficient and take advantage of the speed of the original C++ implementations.
-  
-- **Maintainability**: The Python SDK should be easily maintainable and updatable given any TempestExtremes codebase update.
-  
-- **CommandLine Mirroring**: The Python SDK should mirror the `CommandLine` macros used in the C++ code, providing a consistent user experience.
-
-- **Distribution**: Package and distribute the Python interface via conda-forge.
-
 ## 4. Design
 
 ### 4.1 Directory Structure
@@ -56,26 +44,33 @@ TempestExtremes/
     |-- README.md
 ```
 
-### 4.2 Python Bindings with pybind11
+## Compilation
 
-### 4.3 Compilation
+To compile, run the following commands:
 
-Use the `setup.py` script within the `python-sdk/` directory to automate the build process. 
-
-Run the following command under python-sdk directory:
-
+`cd python-sdk`
 `python setup.py build_ext --inplace`
 
-### 4.4 Testing
+## Testing
+`python ./python-sdk/test.py`
 
-1. **Unit Tests**: `python .python-sdk/test/test.py`
+## Usage 
 
-2. **Continuous Integration**: Use platforms like GitHub Actions to automatically run tests whenever the C++ code or bindings are updated.
+### DetectNodes Example
+`from TempestExtremes import *
 
-### 4.5 Documentation
+cmd_dict = {
+    "--in_data": "./test/cn_files/outCSne30_test2.nc",
+    "--timefilter": '"6hr"',
+    "--out": "out1.dat",
+    "--searchbymin": "MSL",
+    "--closedcontourcmd": "PRMSL_L101,200.,4,0;TMP_L100,-0.4,8.0,1.1",
+    "--mergedist": "6.0",
+    "--outputcmd": "MSL,min,0;_VECMAG(VAR_10U,VAR_10V),max,2;ZS,min,0",
+    "--latname": "lat",
+    "--lonname": "lon",
+}
 
-1. **Inline Comments**: Ensure that each binding has inline comments detailing its functionality and any nuances related to its operation.
+print(cmd_dict)
 
-2. **User Guide**: 
-    - Update the existing user guide or create a separate guide specifically for the Python SDK. This guide should provide examples, usage scenarios, and best practices.
-    - Make sure the binding code include doc string so that user can access the documentation through help() from python terminal. 
+DetectNodes(cmd_dict)`
