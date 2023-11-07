@@ -1,7 +1,7 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
-#include "../src/nodes/StitchNodes.cpp"
+#include "../src/nodes/DetectNodes.cpp"
 #include "../src/base/Variable.h"
 #include "../src/nodes/ClosedContourOp.h"
 #include "../src/base/FilenameList.h"
