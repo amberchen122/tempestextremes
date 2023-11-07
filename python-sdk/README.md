@@ -46,26 +46,17 @@ TempestExtremes/
 │
 |-- python-sdk/
     |-- build
-    |-- DetectNodes/
-        |-- detect_nodes_binding.cpp
-        |-- ...
+    |-- src/
+        |-- bindings.cpp
+        |-- main_overrides.h
     |-- test/
-        └── detect_nodes_test.py
+        └── test.py
     |-- __init__.py
     |-- setup.py
-    |-- DESIGN.md
-    |-- DetectNodes.cpython-310-x86_64-linux-gnu.so
+    |-- README.md
 ```
 
 ### 4.2 Python Bindings with pybind11
-
-1. **DetectNodes**: Start with creating bindings for `DetectNodes` as it's a core functionality.
-   
-   - File: `pybindings/detectnodes_bindings.cpp`
-   - Expose necessary functions/classes from `DetectNodes` to Python.
-   - TODO: Use Python's `argparse` module to mirror the `CommandLine` macros. 
-
-2. **Other Modules**: Follow a similar approach for other modules in the `src/` directory.
 
 ### 4.3 Compilation
 
@@ -77,7 +68,7 @@ Run the following command under python-sdk directory:
 
 ### 4.4 Testing
 
-1. **Unit Tests**: Write unit tests for each Python binding to ensure correctness. These tests should reside in a `tests/` directory within `python-sdk/`.
+1. **Unit Tests**: `python .python-sdk/test/test.py`
 
 2. **Continuous Integration**: Use platforms like GitHub Actions to automatically run tests whenever the C++ code or bindings are updated.
 
@@ -88,16 +79,3 @@ Run the following command under python-sdk directory:
 2. **User Guide**: 
     - Update the existing user guide or create a separate guide specifically for the Python SDK. This guide should provide examples, usage scenarios, and best practices.
     - Make sure the binding code include doc string so that user can access the documentation through help() from python terminal. 
-
-
-## 5. Future Work
-
-1. **Performance Optimization**: Monitor the performance of the Python SDK and consider optimizations, especially for computationally intensive tasks.
-
-2. **Extended Functionality**: As TempestExtremes evolves, ensure that the Python SDK is updated to reflect new functionalities or changes in the C++ codebase.
-
-3. **Community Feedback**: Engage with the user community to gather feedback and make iterative improvements to the SDK.
-
-## 6. Conclusion
-
-Building a Python SDK for TempestExtremes will significantly enhance its accessibility and usability within the Python community. By following the design outlined in this document, we aim to provide a robust, maintainable, and user-friendly interface that mirrors the power and functionality of the original C++ codebase.
