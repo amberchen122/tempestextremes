@@ -33,7 +33,7 @@ TempestExtremes/
 │   └── ...
 │
 |-- python-sdk/
-    |-- build
+    |-- build/
     |-- src/
         |-- bindings.cpp
         |-- main_overrides.h
@@ -49,6 +49,7 @@ TempestExtremes/
 To compile, run the following commands:
 
 `cd python-sdk`
+
 `python setup.py build_ext --inplace`
 
 ## Testing
