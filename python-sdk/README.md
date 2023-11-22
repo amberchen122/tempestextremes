@@ -125,7 +125,9 @@ To compile, run the following commands:
 ## Usage 
 
 ### DetectNodes Example
-`from TempestExtremes import *
+
+```python
+from TempestExtremes import *
 
 cmd_dict = {
     "--in_data": "./test/cn_files/outCSne30_test2.nc",
@@ -141,4 +143,5 @@ cmd_dict = {
 
 print(cmd_dict)
 
-DetectNodes(cmd_dict)`
+DetectNodes(cmd_dict)
+``````
