@@ -53,8 +53,75 @@ To compile, run the following commands:
 `python setup.py build_ext --inplace`
 
 ## Testing
+
 `python ./python-sdk/test.py`
 
+## Functions
+    AccumulateData(...) method of builtins.PyCapsule instance
+        AccumulateData(arg0: Dict[str, str]) -> int
+    
+    AccumulateERA5Forecast(...) method of builtins.PyCapsule instance
+        AccumulateERA5Forecast(arg0: Dict[str, str]) -> int
+    
+    BlobStats(...) method of builtins.PyCapsule instance
+        BlobStats(arg0: Dict[str, str]) -> int
+    
+    Climatology(...) method of builtins.PyCapsule instance
+        Climatology(arg0: Dict[str, str]) -> int
+    
+    CompressBlobs(...) method of builtins.PyCapsule instance
+        CompressBlobs(arg0: Dict[str, str]) -> int
+    
+    DetectBlobs(...) method of builtins.PyCapsule instance
+        DetectBlobs(arg0: Dict[str, str]) -> int
+    
+    DetectNodes(...) method of builtins.PyCapsule instance
+        DetectNodes(arg0: Dict[str, str]) -> int
+    
+    FourierFilter(...) method of builtins.PyCapsule instance
+        FourierFilter(arg0: Dict[str, str]) -> int
+    
+    GenerateConnectivityFile(...) method of builtins.PyCapsule instance
+        GenerateConnectivityFile(arg0: Dict[str, str]) -> int
+    
+    GenerateNearestNeighborMap(...) method of builtins.PyCapsule instance
+        GenerateNearestNeighborMap(arg0: Dict[str, str]) -> int
+
+    HistogramNodes(...) method of builtins.PyCapsule instance
+        HistogramNodes(arg0: Dict[str, str]) -> int
+    
+    IntegrateDimension(...) method of builtins.PyCapsule instance
+        IntegrateDimension(arg0: Dict[str, str]) -> int
+    
+    LagrangianParcelTracker(...) method of builtins.PyCapsule instance
+        LagrangianParcelTracker(arg0: Dict[str, str]) -> int
+    
+    NodeFileCompose(...) method of builtins.PyCapsule instance
+        NodeFileCompose(arg0: Dict[str, str]) -> int
+    
+    NodeFileEditor(...) method of builtins.PyCapsule instance
+        NodeFileEditor(arg0: Dict[str, str]) -> int
+    
+    PersistentBlobs(...) method of builtins.PyCapsule instance
+        PersistentBlobs(arg0: Dict[str, str]) -> int
+    
+    QuantileCalculator(...) method of builtins.PyCapsule instance
+        QuantileCalculator(arg0: Dict[str, str]) -> int
+    
+    ShapefileMask(...) method of builtins.PyCapsule instance
+        ShapefileMask(arg0: Dict[str, str]) -> int
+    
+    SpineARs(...) method of builtins.PyCapsule instance
+        SpineARs(arg0: Dict[str, str]) -> int
+    
+    StitchBlobs(...) method of builtins.PyCapsule instance
+        StitchBlobs(arg0: Dict[str, str]) -> int
+    
+    StitchNodes(...) method of builtins.PyCapsule instance
+        StitchNodes(arg0: Dict[str, str]) -> int
+    
+    VariableProcessor(...) method of builtins.PyCapsule instance
+        VariableProcessor(arg0: Dict[str, str]) -> int
 ## Usage 
 
 ### DetectNodes Example
